@@ -103,6 +103,9 @@ public class NerdClient {
 
     public List<Sentence> segment(String text) {
         List<Sentence> list = new ArrayList<Sentence>();
+
+        int status = 0, retry = 0, retries = 4;
+        
         ObjectMapper mapper = new ObjectMapper();
         final URI uri;
         try {
@@ -122,19 +125,27 @@ public class NerdClient {
         textnode.put("text", text);
         httpPost.setEntity(new StringEntity(textnode.toString(), UTF_8));
         CloseableHttpResponse closeableHttpResponse = null;
-        try {
-            closeableHttpResponse = httpResponse.execute(httpPost);
-            if (closeableHttpResponse.getStatusLine().getStatusCode() == HttpStatus.SC_OK) {
-                String jsonOut = IOUtils.toString(closeableHttpResponse.getEntity().getContent(), UTF_8);
-                JsonNode actualObj = mapper.readTree(jsonOut);
-                list = mapper.readValue(actualObj.get("sentences").toString(), new TypeReference<List<Sentence>>(){});
-            } else {
 
+        do {
+            try {
+                closeableHttpResponse = httpResponse.execute(httpPost);
+                status = closeableHttpResponse.getStatusLine().getStatusCode();
+                if (status == HttpStatus.SC_OK) {
+                    String jsonOut = IOUtils.toString(closeableHttpResponse.getEntity().getContent(), UTF_8);
+                    JsonNode actualObj = mapper.readTree(jsonOut);
+                    list = mapper.readValue(actualObj.get("sentences").toString(), new TypeReference<List<Sentence>>(){});
+                } else if(status == HttpStatus.SC_GATEWAY_TIMEOUT){
+                    try {
+                        Thread.sleep(900000);
+                        retry++;
+                    } catch (InterruptedException ex) {
+                        Thread.currentThread().interrupt();
+                    }
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
             }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
+        } while (retry < retries && status == HttpStatus.SC_GATEWAY_TIMEOUT);
         return list;
     }
 
