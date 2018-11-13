@@ -52,7 +52,10 @@ dependencies {
 //    implementation 'com.fasterxml.jackson.core:jackson-annotations:2.9.0'
     implementation 'com.fasterxml.jackson.core:jackson-core:2.9.0'
     implementation 'com.fasterxml.jackson.core:jackson-databind:2.9.0'
-    implementation 'com.fasterxml.jackson.core:jackson-mapper-asl:2.9.1'
+//    implementation 'com.fasterxml.jackson.core:jackson-mapper-asl:2.9.1'
+
+//    implementation 'org.springframework:spring-test'
+//    implementation 'org.springframework.boot:spring-boot-test:1.5.2.RELEASE'
 }
 
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar

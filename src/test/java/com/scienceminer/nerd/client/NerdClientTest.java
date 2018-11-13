@@ -23,7 +23,7 @@ public class NerdClientTest {
     @Ignore
     public void test() throws Exception {
 
-        target = new NerdClient("nerd.huma-num.fr/test/service");
+        target = new NerdClient("http://nerd.huma-num.fr/test/service");
         System.out.println(target.textDisambiguate("We were walking to Washington and then we arrive to Milan, but nobody was there. ", null));
     }
 

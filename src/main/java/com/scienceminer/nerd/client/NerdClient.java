@@ -4,7 +4,9 @@ package com.scienceminer.nerd.client;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.scienceminer.nerd.data.Sentence;
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang.StringUtils;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.HttpStatus;
@@ -20,6 +22,7 @@ import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.impl.client.HttpClients;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.web.client.RestTemplateBuilder;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -28,19 +31,22 @@ import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.Map;
 
+import static org.apache.commons.lang3.StringUtils.startsWith;
 import static org.apache.http.entity.ContentType.APPLICATION_JSON;
 
 public class NerdClient {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(NerdClient.class);
 
-
     private static String PATH_DISAMBIGUATE = "/disambiguate";
     private static String PATH_CONCEPT = "/kb/concept";
-    private static String PATH_LANGUAGE_RECOGNIZE = "/kb/concept";
-    private static String PATH_SEGMENTER = "/kb/concept";
+    private static String PATH_LANGUAGE_RECOGNITION = "/language";
+    private static String PATH_SEGMENTER = "/segment";
+
+    private static int MAX_TEXT_LENGTH = 500;
 
     private String host;
     private int port = -1;
@@ -55,14 +61,14 @@ public class NerdClient {
 
     public NerdClient(String host, int port) {
         this(host);
-        this.port = port; 
+        this.port = port;
     }
 
     public String getConcept(String id) {
 
         String response = null;
-        String urlNerd = "http://" + this.host + PATH_CONCEPT + "/" + id;
-        if ((id != null) || (id.startsWith("Q") || (id.startsWith("P")))) {
+        String urlNerd = this.host + PATH_CONCEPT + "/" + id;
+        if ((id != null) || (startsWith(id, "Q") || (startsWith(id, "P")))) {
             try {
                 HttpClient client = HttpClientBuilder.create().build();
 
@@ -90,12 +96,46 @@ public class NerdClient {
     }
 
 
-    public String segment() {
-        throw new UnsupportedOperationException("Method not yet implemented.");
+    public List<Sentence> segment(String text) {
+
+        
+        HttpPost httpPost = new HttpPost(uri);
+        CloseableHttpClient httpResponse = HttpClients.createDefault();
+
+        httpPost.setHeader("Content-Type", APPLICATION_JSON.toString());
+        httpPost.setEntity(new StringEntity(node.toString()));
+        CloseableHttpResponse closeableHttpResponse = httpResponse.execute(httpPost);
+
+        if (closeableHttpResponse.getStatusLine().getStatusCode() == HttpStatus.SC_OK) {
+            return IOUtils.toString(closeableHttpResponse.getEntity().getContent(), StandardCharsets.UTF_8);
+        } else {
+            return result;
+        }
     }
 
 
-    public String textDisambiguate(String text, String language) {
+    public String disambiguateText(String text, String language) {
+
+        ObjectMapper mapper = new ObjectMapper();
+        ObjectNode node = mapper.createObjectNode();
+
+        //prepare single sentence
+        ObjectNode dataNode = mapper.createObjectNode();
+        dataNode.put("offsetStart", 0);
+        dataNode.put("offsetEnd", StringUtils.length(text));
+
+        final ArrayNode sentenceCoordinates = mapper.createArrayNode();
+        sentenceCoordinates.add(dataNode);
+
+        int numberOfSentences = sentenceCoordinates.size();
+
+        if (StringUtils.length(text) > MAX_TEXT_LENGTH){
+            // we need to cut the text in more sentences
+
+            segment(text);
+            
+        }
+
 
         String result = null;
         try {
@@ -104,8 +144,7 @@ public class NerdClient {
                     .setHost(this.host + PATH_DISAMBIGUATE)
                     .build();
 
-            ObjectMapper mapper = new ObjectMapper();
-            ObjectNode node = mapper.createObjectNode();
+
             node.put("text", text);
             if (language != null) {
                 ObjectNode dataNode = mapper.createObjectNode();
@@ -192,7 +231,6 @@ public class NerdClient {
         }
         return result;
     }
-
 
 
 }
