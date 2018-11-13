@@ -41,6 +41,7 @@ import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -256,6 +257,21 @@ public class NerdClient {
         if(totalNumberOfSentences > 1) {
             query.put("sentences", sentenceCoordinates);
         }
+
+        if(sentenceGroup.size() > 0) {
+            for(List<Integer> group : sentenceGroup) {
+                query.put("processSentence", Arrays.toString(group.toArray()));
+                final ObjectNode jsonNodes = processQuery(query, true);
+                query.set("entities", jsonNodes.get("entities"));
+                query.set("language", jsonNodes.get("language"));
+            }
+        } else {
+            final ObjectNode jsonNodes = processQuery(query, true);
+            query.set("entities", jsonNodes.get("entities"));
+            query.set("language", jsonNodes.get("language"));
+
+        }
+        return query;
     }
 
     public ObjectNode disambiguateText(String text, String language) {
