@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.scienceminer.nerd.data.Sentence;
+import com.scienceminer.nerd.exception.ClientException;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.http.HttpEntity;
@@ -22,18 +23,15 @@ import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.impl.client.HttpClients;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.boot.web.client.RestTemplateBuilder;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
-import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.apache.commons.lang3.StringUtils.startsWith;
 import static org.apache.http.entity.ContentType.APPLICATION_JSON;
 
@@ -78,7 +76,7 @@ public class NerdClient {
 
                 int responseId = httpResponse.getStatusLine().getStatusCode();
                 if (responseId == HttpStatus.SC_OK) {
-                    response = IOUtils.toString(entity.getContent(), StandardCharsets.UTF_8);
+                    response = IOUtils.toString(entity.getContent(), UTF_8);
                     return response;
                 } else {
                     return response;
@@ -98,18 +96,31 @@ public class NerdClient {
 
     public List<Sentence> segment(String text) {
 
-        
+        final URI uri;
+        try {
+            uri = new URIBuilder()
+                    .setHost(this.host + PATH_DISAMBIGUATE)
+                    .build();
+        } catch (URISyntaxException e) {
+            throw new ClientException("Error while setting up the url. ", e);
+        }
+
         HttpPost httpPost = new HttpPost(uri);
         CloseableHttpClient httpResponse = HttpClients.createDefault();
 
         httpPost.setHeader("Content-Type", APPLICATION_JSON.toString());
-        httpPost.setEntity(new StringEntity(node.toString()));
-        CloseableHttpResponse closeableHttpResponse = httpResponse.execute(httpPost);
+        httpPost.setEntity(new StringEntity(text, UTF_8));
+        CloseableHttpResponse closeableHttpResponse = null;
+        try {
+            closeableHttpResponse = httpResponse.execute(httpPost);
+            if (closeableHttpResponse.getStatusLine().getStatusCode() == HttpStatus.SC_OK) {
+                String jsonOut = IOUtils.toString(closeableHttpResponse.getEntity().getContent(), UTF_8);
 
-        if (closeableHttpResponse.getStatusLine().getStatusCode() == HttpStatus.SC_OK) {
-            return IOUtils.toString(closeableHttpResponse.getEntity().getContent(), StandardCharsets.UTF_8);
-        } else {
-            return result;
+            } else {
+                
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
 
@@ -159,7 +170,7 @@ public class NerdClient {
             CloseableHttpResponse closeableHttpResponse = httpResponse.execute(httpPost);
 
             if (closeableHttpResponse.getStatusLine().getStatusCode() == HttpStatus.SC_OK) {
-                return IOUtils.toString(closeableHttpResponse.getEntity().getContent(), StandardCharsets.UTF_8);
+                return IOUtils.toString(closeableHttpResponse.getEntity().getContent(), UTF_8);
             } else {
                 return result;
             }
@@ -217,7 +228,7 @@ public class NerdClient {
             CloseableHttpResponse closeableHttpResponse = httpResponse.execute(httpPost);
 
             if (closeableHttpResponse.getStatusLine().getStatusCode() == HttpStatus.SC_OK) {
-                return IOUtils.toString(closeableHttpResponse.getEntity().getContent(), StandardCharsets.UTF_8);
+                return IOUtils.toString(closeableHttpResponse.getEntity().getContent(), UTF_8);
             } else {
                 return result;
             }

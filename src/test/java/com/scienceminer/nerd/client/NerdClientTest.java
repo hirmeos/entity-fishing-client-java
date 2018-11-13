@@ -24,7 +24,7 @@ public class NerdClientTest {
     public void test() throws Exception {
 
         target = new NerdClient("http://nerd.huma-num.fr/test/service");
-        System.out.println(target.textDisambiguate("We were walking to Washington and then we arrive to Milan, but nobody was there. ", null));
+        System.out.println(target.disambiguateText("We were walking to Washington and then we arrive to Milan, but nobody was there. ", null));
     }
 
 }
