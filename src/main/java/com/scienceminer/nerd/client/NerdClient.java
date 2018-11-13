@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.scienceminer.nerd.data.Sentence;
 import com.scienceminer.nerd.exception.ClientException;
+import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.http.HttpEntity;
@@ -28,10 +29,12 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.apache.commons.lang3.StringUtils.startsWith;
 import static org.apache.http.entity.ContentType.APPLICATION_JSON;
 
@@ -45,6 +48,8 @@ public class NerdClient {
     private static String PATH_SEGMENTER = "/segment";
 
     private static int MAX_TEXT_LENGTH = 500;
+    private static int SENTENCES_PER_GROUP = 10;
+
 
     private String host;
     private int port = -1;
@@ -117,35 +122,63 @@ public class NerdClient {
                 String jsonOut = IOUtils.toString(closeableHttpResponse.getEntity().getContent(), UTF_8);
 
             } else {
-                
+
             }
         } catch (IOException e) {
             e.printStackTrace();
         }
+
+        return null;
     }
 
+    private List<List<Integer>> groupSentence(int totalNumberOfSentence, int groupLength) {
+        List<List<Integer>> sentenceGroups = new ArrayList<>();
+        List<Integer> currentSentenceGroup = new ArrayList<>();
+
+        for (int i = 0; i < totalNumberOfSentence; i++) {
+            if (i % groupLength == 0) {
+                if (currentSentenceGroup.size() > 0) {
+                    sentenceGroups.add(currentSentenceGroup);
+                }
+
+                currentSentenceGroup = new ArrayList<>();
+                currentSentenceGroup.add(i);
+            } else {
+                currentSentenceGroup.add(i);
+            }
+        }
+
+        if (CollectionUtils.isNotEmpty(currentSentenceGroup)) {
+            sentenceGroups.add(currentSentenceGroup);
+        }
+
+        return sentenceGroups;
+    }
 
     public String disambiguateText(String text, String language) {
 
-        ObjectMapper mapper = new ObjectMapper();
-        ObjectNode node = mapper.createObjectNode();
-
         //prepare single sentence
-        ObjectNode dataNode = mapper.createObjectNode();
-        dataNode.put("offsetStart", 0);
-        dataNode.put("offsetEnd", StringUtils.length(text));
 
-        final ArrayNode sentenceCoordinates = mapper.createArrayNode();
-        sentenceCoordinates.add(dataNode);
+        List<Sentence> sentenceCoordinates = new ArrayList<>();
+        sentenceCoordinates.add(new Sentence(0, StringUtils.length(text)));
 
         int numberOfSentences = sentenceCoordinates.size();
+        List<List<Integer>> sentenceGroup = new ArrayList<>();
 
-        if (StringUtils.length(text) > MAX_TEXT_LENGTH){
+        if (StringUtils.length(text) > MAX_TEXT_LENGTH) {
             // we need to cut the text in more sentences
 
-            segment(text);
-            
+            final List<Sentence> sentences = segment(text);
+
+            numberOfSentences = sentences.size();
+            sentenceCoordinates = sentences;
+
+            sentenceGroup = groupSentence(numberOfSentences, SENTENCES_PER_GROUP);
+
+        } else {
+//            query['sentence'] = "true"
         }
+
 
 
         String result = null;

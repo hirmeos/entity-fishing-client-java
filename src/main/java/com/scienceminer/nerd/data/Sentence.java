@@ -1,9 +1,11 @@
 package com.scienceminer.nerd.data;
 
+import java.io.Serializable;
+
 /**
  * This class represents a sentence with stand-off position to mark its boundaries in a text.
  */
-public class Sentence {
+public class Sentence implements Serializable {
 
     private int offsetStart;
     private int offsetEnd;
