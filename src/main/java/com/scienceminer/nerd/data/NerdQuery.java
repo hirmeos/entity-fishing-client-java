@@ -7,7 +7,6 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.scienceminer.nerd.exception.ClientException;
-import com.sun.tools.internal.xjc.Language;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 
@@ -259,7 +258,7 @@ public class NerdQuery {
 
         try {
             ObjectMapper mapper = new ObjectMapper();
-            mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, true);
+            mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
             mapper.configure(JsonParser.Feature.ALLOW_SINGLE_QUOTES, true);
             return mapper.readValue(theQuery, NerdQuery.class);
         } catch (JsonGenerationException | JsonMappingException e) {

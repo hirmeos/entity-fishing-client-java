@@ -1,13 +1,22 @@
 package com.scienceminer.nerd.client;
 
 
+import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.scienceminer.nerd.data.Language;
+import com.scienceminer.nerd.data.NerdEntity;
+import com.scienceminer.nerd.data.NerdQuery;
 import com.scienceminer.nerd.data.Sentence;
 import com.scienceminer.nerd.exception.ClientException;
+import com.sun.security.ntlm.Client;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
@@ -52,12 +61,15 @@ public class NerdClient {
     private static int MAX_TEXT_LENGTH = 500;
     private static int SENTENCES_PER_GROUP = 10;
 
+    private static final ObjectMapper mapper = new ObjectMapper();
+
 
     private String host;
     private int port = -1;
 
     public NerdClient() {
-
+        mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+        mapper.configure(JsonParser.Feature.ALLOW_SINGLE_QUOTES, true);
     }
 
     public NerdClient(String host) {
@@ -102,19 +114,10 @@ public class NerdClient {
 
 
     public List<Sentence> segment(String text) {
-        List<Sentence> list = new ArrayList<Sentence>();
+        List<Sentence> list = new ArrayList<>();
 
         int status = 0, retry = 0, retries = 4;
-        
-        ObjectMapper mapper = new ObjectMapper();
-        final URI uri;
-        try {
-            uri = new URIBuilder()
-                    .setHost(this.host + PATH_SEGMENTATION)
-                    .build();
-        } catch (URISyntaxException e) {
-            throw new ClientException("Error while setting up the url. ", e);
-        }
+        final URI uri = getUri(PATH_SEGMENTATION);
 
         HttpPost httpPost = new HttpPost(uri);
         CloseableHttpClient httpResponse = HttpClients.createDefault();
@@ -133,20 +136,36 @@ public class NerdClient {
                 if (status == HttpStatus.SC_OK) {
                     String jsonOut = IOUtils.toString(closeableHttpResponse.getEntity().getContent(), UTF_8);
                     JsonNode actualObj = mapper.readTree(jsonOut);
-                    list = mapper.readValue(actualObj.get("sentences").toString(), new TypeReference<List<Sentence>>(){});
-                } else if(status == HttpStatus.SC_GATEWAY_TIMEOUT){
+                    list = mapper.readValue(actualObj.get("sentences").toString(), new TypeReference<List<Sentence>>() {
+                    });
+                } else if (status == HttpStatus.SC_SERVICE_UNAVAILABLE) {
                     try {
+                        LOGGER.warn("Got 503. Sleeping and re-trying. ");
                         Thread.sleep(900000);
                         retry++;
                     } catch (InterruptedException ex) {
                         Thread.currentThread().interrupt();
                     }
                 }
+            } catch (JsonParseException | JsonMappingException e) {
+                throw new ClientException("Cannot parse query.", e);
             } catch (IOException e) {
-                e.printStackTrace();
+                throw new ClientException("Error when sending the request.", e);
             }
         } while (retry < retries && status == HttpStatus.SC_GATEWAY_TIMEOUT);
         return list;
+    }
+
+    private URI getUri(String path) {
+        final URI uri;
+        try {
+            uri = new URIBuilder()
+                    .setHost(this.host + path)
+                    .build();
+        } catch (URISyntaxException e) {
+            throw new ClientException("Error while setting up the url. ", e);
+        }
+        return uri;
     }
 
     private List<List<Integer>> groupSentence(int totalNumberOfSentence, int groupLength) {
@@ -173,14 +192,51 @@ public class NerdClient {
         return sentenceGroups;
     }
 
-    public String disambiguateText(String text, String language) {
+    public ObjectNode processQuery(ObjectNode query) {
+        return processQuery(query, false);
+    }
+
+    public ObjectNode processQuery(ObjectNode query, boolean prepared) {
+        if (prepared) {
+            //POST
+            final URI uri = getUri(PATH_DISAMBIGUATE);
+
+            HttpPost httpPost = new HttpPost(uri);
+            CloseableHttpClient httpResponse = HttpClients.createDefault();
+
+            httpPost.setHeader("Content-Type", APPLICATION_JSON.toString());
+            String jsonInString;
+            try {
+                jsonInString = mapper.writeValueAsString(query);
+            } catch (JsonProcessingException e) {
+                throw new ClientException("Cannot serialise query. ", e);
+            }
+
+            try {
+                httpPost.setEntity(new StringEntity(jsonInString));
+                CloseableHttpResponse closeableHttpResponse = httpResponse.execute(httpPost);
+                if (closeableHttpResponse.getStatusLine().getStatusCode() == HttpStatus.SC_OK) {
+                    ObjectNode response = mapper.readValue(closeableHttpResponse.getEntity().getContent(), ObjectNode.class);
+                    return response;
+                } else {
+                    // TODO: add retry in case of 503
+                }
+            } catch (UnsupportedEncodingException e) {
+                throw new ClientException("Unsupported encoding when setting entity into post. ", e);
+            } catch (ClientProtocolException e) {
+                throw new ClientException("Client protocol exception. ", e);
+            } catch (IOException e) {
+                throw new ClientException("Generic exception when sending POST. ", e);
+            }
+        }
+
+        String text = String.valueOf(query.get("text"));
 
         //prepare single sentence
-
         List<Sentence> sentenceCoordinates = new ArrayList<>();
         sentenceCoordinates.add(new Sentence(0, StringUtils.length(text)));
 
-        int numberOfSentences = sentenceCoordinates.size();
+        int totalNumberOfSentences = sentenceCoordinates.size();
         List<List<Integer>> sentenceGroup = new ArrayList<>();
 
         if (StringUtils.length(text) > MAX_TEXT_LENGTH) {
@@ -188,55 +244,33 @@ public class NerdClient {
 
             final List<Sentence> sentences = segment(text);
 
-            numberOfSentences = sentences.size();
+            totalNumberOfSentences = sentences.size();
             sentenceCoordinates = sentences;
 
-            sentenceGroup = groupSentence(numberOfSentences, SENTENCES_PER_GROUP);
+            sentenceGroup = groupSentence(totalNumberOfSentences, SENTENCES_PER_GROUP);
 
         } else {
 //            query['sentence'] = "true"
         }
 
-
-
-        String result = null;
-        try {
-            final URI uri = new URIBuilder()
-                    .setScheme("http")
-                    .setHost(this.host + PATH_DISAMBIGUATE)
-                    .build();
-
-
-            node.put("text", text);
-            if (language != null) {
-                ObjectNode dataNode = mapper.createObjectNode();
-                dataNode.put("lang", language);
-                node.set("language", dataNode);
-            }
-            HttpPost httpPost = new HttpPost(uri);
-            CloseableHttpClient httpResponse = HttpClients.createDefault();
-
-            httpPost.setHeader("Content-Type", APPLICATION_JSON.toString());
-            httpPost.setEntity(new StringEntity(node.toString()));
-            CloseableHttpResponse closeableHttpResponse = httpResponse.execute(httpPost);
-
-            if (closeableHttpResponse.getStatusLine().getStatusCode() == HttpStatus.SC_OK) {
-                return IOUtils.toString(closeableHttpResponse.getEntity().getContent(), UTF_8);
-            } else {
-                return result;
-            }
-
-        } catch (URISyntaxException e) {
-            e.printStackTrace();
-        } catch (UnsupportedEncodingException e) {
-            e.printStackTrace();
-        } catch (ClientProtocolException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
+        if(totalNumberOfSentences > 1) {
+            query.put("sentences", sentenceCoordinates);
         }
+    }
 
-        return result;
+    public ObjectNode disambiguateText(String text, String language) {
+        final URI uri = getUri(PATH_DISAMBIGUATE);
+
+        ObjectNode query = mapper.createObjectNode();
+        query.put("text", text);
+        final ObjectNode lang = mapper.createObjectNode().put("lang", language);
+        query.put("language", lang);
+
+//        if (CollectionUtils.isNotEmpty(entities)) {
+//            query.setEntities(entities);
+//        }
+
+        return processQuery(query);
     }
 
     public String termDisambiguate(Map<String, Double> listOfTerm, String language) {

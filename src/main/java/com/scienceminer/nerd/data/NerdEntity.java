@@ -48,7 +48,7 @@ public class NerdEntity implements Comparable<NerdEntity> {
 	// preferred/normalised name of the entity
     private String preferredTerm = null;
 
-    private ProcessText.MentionMethod source = null;
+    private MentionMethod source = null;
 
 	// type of the entity (person, location, etc.)
 	private NERLexicon.NER_Type type = null;
