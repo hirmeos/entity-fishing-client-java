@@ -1,6 +1,8 @@
 package com.scienceminer.nerd.client;
 
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -45,7 +47,7 @@ public class NerdClient {
     private static String PATH_DISAMBIGUATE = "/disambiguate";
     private static String PATH_CONCEPT = "/kb/concept";
     private static String PATH_LANGUAGE_RECOGNITION = "/language";
-    private static String PATH_SEGMENTER = "/segment";
+    private static String PATH_SEGMENTATION = "/segmentation";
 
     private static int MAX_TEXT_LENGTH = 500;
     private static int SENTENCES_PER_GROUP = 10;
@@ -100,11 +102,12 @@ public class NerdClient {
 
 
     public List<Sentence> segment(String text) {
-
+        List<Sentence> list = new ArrayList<Sentence>();
+        ObjectMapper mapper = new ObjectMapper();
         final URI uri;
         try {
             uri = new URIBuilder()
-                    .setHost(this.host + PATH_DISAMBIGUATE)
+                    .setHost(this.host + PATH_SEGMENTATION)
                     .build();
         } catch (URISyntaxException e) {
             throw new ClientException("Error while setting up the url. ", e);
@@ -114,13 +117,17 @@ public class NerdClient {
         CloseableHttpClient httpResponse = HttpClients.createDefault();
 
         httpPost.setHeader("Content-Type", APPLICATION_JSON.toString());
-        httpPost.setEntity(new StringEntity(text, UTF_8));
+
+        ObjectNode textnode = mapper.createObjectNode();
+        textnode.put("text", text);
+        httpPost.setEntity(new StringEntity(textnode.toString(), UTF_8));
         CloseableHttpResponse closeableHttpResponse = null;
         try {
             closeableHttpResponse = httpResponse.execute(httpPost);
             if (closeableHttpResponse.getStatusLine().getStatusCode() == HttpStatus.SC_OK) {
                 String jsonOut = IOUtils.toString(closeableHttpResponse.getEntity().getContent(), UTF_8);
-
+                JsonNode actualObj = mapper.readTree(jsonOut);
+                list = mapper.readValue(actualObj.get("sentences").toString(), new TypeReference<List<Sentence>>(){});
             } else {
 
             }
@@ -128,7 +135,7 @@ public class NerdClient {
             e.printStackTrace();
         }
 
-        return null;
+        return list;
     }
 
     private List<List<Integer>> groupSentence(int totalNumberOfSentence, int groupLength) {
