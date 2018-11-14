@@ -123,13 +123,13 @@ bintray {
     key = project.hasProperty('bintrayApiKey') ? bintrayApiKey : ''
     configurations = ['archives']
     pkg {
-        name = 'grobid'
+        name = 'entity-fishing-client'
         repo = 'maven'
         userOrg = 'rookies'
         licenses = ['Apache-2.0']
-        vcsUrl = 'https://github.com/kermitt2/grobid'
-        issueTrackerUrl = 'https://github.com/kermitt2/grobid/issues'
-        githubRepo = 'kermitt2/grobid'
+        vcsUrl = 'https://github.com/Hirmeos/entity-fishing-client-java'
+        issueTrackerUrl = 'https://github.com/Hirmeos/entity-fishing-client-java/issues'
+        githubRepo = 'Hirmeos/entity-fishing-client-java'
 
         version {
             name = rootProject.version
