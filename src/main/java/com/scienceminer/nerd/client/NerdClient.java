@@ -11,27 +11,18 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.scienceminer.nerd.exception.ClientException;
-import com.sun.security.ntlm.Client;
-import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
-import org.apache.http.HttpEntity;
-import org.apache.http.HttpResponse;
 import org.apache.http.HttpStatus;
-import org.apache.http.NameValuePair;
 import org.apache.http.client.ClientProtocolException;
-import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.utils.URIBuilder;
-import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.entity.mime.MultipartEntityBuilder;
 import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.impl.client.HttpClients;
-import org.apache.http.message.BasicNameValuePair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -40,11 +31,11 @@ import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static org.apache.commons.lang.StringUtils.isBlank;
 import static org.apache.commons.lang3.StringUtils.isNotBlank;
 import static org.apache.commons.lang3.StringUtils.startsWith;
 import static org.apache.http.entity.ContentType.APPLICATION_JSON;
@@ -84,79 +75,47 @@ public class NerdClient {
         this.port = port;
     }
 
-    public String getConcept(String id) {
-
-        String response = null;
+    public ObjectNode getConcept(String id) {
         String urlNerd = this.host + PATH_CONCEPT + "/" + id;
-        if ((id != null) || (startsWith(id, "Q") || (startsWith(id, "P")))) {
-            try {
-                HttpClient client = HttpClientBuilder.create().build();
-
-                HttpGet request = new HttpGet(urlNerd);
-                HttpResponse httpResponse = client.execute(request);
-                HttpEntity entity = httpResponse.getEntity();
-
-                int responseId = httpResponse.getStatusLine().getStatusCode();
-                if (responseId == HttpStatus.SC_OK) {
-                    response = IOUtils.toString(entity.getContent(), UTF_8);
-                    return response;
-                } else {
-                    return response;
-                }
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+        if (isBlank(id) || (!startsWith(id, "Q") && !startsWith(id, "P"))) {
+            throw new ClientException("The id " + id + " must be not blank and start with P or Q or as number");
         }
-        return response;
+        CloseableHttpClient client = HttpClients.createDefault();
+        HttpGet request = new HttpGet(urlNerd);
+
+        try {
+            return sendRequest(client.execute(request), PATH_CONCEPT);
+        } catch (IOException e) {
+            throw new ClientException("General error when calling the service. ", e);
+        }
     }
 
 
-    public String getLanguage() {
-        throw new UnsupportedOperationException("Method not yet implemented.");
+    public ObjectNode getLanguage(String text) {
+        return prepareAndSendSimplePost(text, PATH_LANGUAGE_RECOGNITION);
     }
 
-
-    public ObjectNode segment(String text) {
-        int status = 0, retry = 0, retries = 4;
-        final URI uri = getUri(PATH_SEGMENTATION);
+    private ObjectNode prepareAndSendSimplePost(String text, String pathLanguageRecognition) {
+        final URI uri = getUri(pathLanguageRecognition);
 
         HttpPost httpPost = new HttpPost(uri);
-        CloseableHttpClient httpResponse = HttpClients.createDefault();
-
-//        httpPost.setHeader("Content-Type", APPLICATION_JSON.toString());
-//        httpPost.setHeader("Content-Type", APPLICATION_JSON.toString());
+        CloseableHttpClient client = HttpClients.createDefault();
 
         MultipartEntityBuilder builder = MultipartEntityBuilder.create();
         builder.addTextBody("text", text);
 
         httpPost.setEntity(builder.build());
-        CloseableHttpResponse closeableHttpResponse = null;
 
-        do {
-            try {
-                closeableHttpResponse = httpResponse.execute(httpPost);
-                status = closeableHttpResponse.getStatusLine().getStatusCode();
-                if (status == HttpStatus.SC_OK) {
-                    JsonNode actualObj = mapper.readTree(closeableHttpResponse.getEntity().getContent());
-                    return actualObj.deepCopy();
-                } else if (status == HttpStatus.SC_SERVICE_UNAVAILABLE) {
-                    try {
-                        LOGGER.warn("Got 503. Sleeping and re-trying. ");
-                        Thread.sleep(900000);
-                        retry++;
-                    } catch (InterruptedException ex) {
-                        Thread.currentThread().interrupt();
-                    }
-                }
-            } catch (JsonParseException | JsonMappingException e) {
-                throw new ClientException("Cannot parse query.", e);
-            } catch (IOException e) {
-                throw new ClientException("Error when sending the request.", e);
-            }
-        } while (retry < retries && status == HttpStatus.SC_GATEWAY_TIMEOUT);
+        try {
+            return sendRequest(client.execute(httpPost), pathLanguageRecognition);
+        } catch (IOException e) {
+            throw new ClientException("General error when calling the service. ", e);
+        }
+    }
 
-        throw new ClientException("Cannot call the segmentation service. Tried already several time without success. " +
-                "Status code: " + status + ".");
+
+    public ObjectNode segment(String text) {
+        return prepareAndSendSimplePost(text, PATH_SEGMENTATION);
     }
 
     private URI getUri(String path) {
@@ -210,26 +169,17 @@ public class NerdClient {
             String jsonInString;
             try {
                 jsonInString = mapper.writeValueAsString(query);
-            } catch (JsonProcessingException e) {
+                httpPost.setEntity(new StringEntity(jsonInString));
+            } catch (JsonProcessingException | UnsupportedEncodingException e) {
                 throw new ClientException("Cannot serialise query. ", e);
             }
-
+            
             try {
-                httpPost.setEntity(new StringEntity(jsonInString));
-                CloseableHttpResponse closeableHttpResponse = httpResponse.execute(httpPost);
-                if (closeableHttpResponse.getStatusLine().getStatusCode() == HttpStatus.SC_OK) {
-                    ObjectNode response = mapper.readValue(closeableHttpResponse.getEntity().getContent(), ObjectNode.class);
-                    return response;
-                }
-                throw new ClientException("Error (code: " + closeableHttpResponse.getStatusLine().getStatusCode()
-                        + ") when processing the query \n " + query);
-            } catch (UnsupportedEncodingException e) {
-                throw new ClientException("Unsupported encoding when setting entity into post. ", e);
-            } catch (ClientProtocolException e) {
-                throw new ClientException("Client protocol exception. ", e);
+                return sendRequest(httpResponse.execute(httpPost), PATH_DISAMBIGUATE);
             } catch (IOException e) {
                 throw new ClientException("Generic exception when sending POST. ", e);
             }
+            
         }
 
         String text = query.get("text").asText();
@@ -255,7 +205,7 @@ public class NerdClient {
             sentenceGroup = groupSentence(totalNumberOfSentences, SENTENCES_PER_GROUP);
 
         } else {
-           query.put("sentence", true); 
+            query.put("sentence", true);
         }
 
         if (totalNumberOfSentences > 1) {
@@ -348,4 +298,37 @@ public class NerdClient {
     }
 
 
+    private ObjectNode sendRequest(CloseableHttpResponse execute, String request) {
+        int retry = 0;
+        int retries = 4;
+        int status;
+
+        CloseableHttpResponse closeableHttpResponse;
+
+        do {
+            try {
+                closeableHttpResponse = execute;
+                status = closeableHttpResponse.getStatusLine().getStatusCode();
+                if (status == HttpStatus.SC_OK) {
+                    JsonNode actualObj = mapper.readTree(closeableHttpResponse.getEntity().getContent());
+                    return actualObj.deepCopy();
+                } else if (status == HttpStatus.SC_SERVICE_UNAVAILABLE) {
+                    try {
+                        LOGGER.warn("Got 503. Sleeping and re-trying. ");
+                        Thread.sleep(900000);
+                        retry++;
+                    } catch (InterruptedException ex) {
+                        Thread.currentThread().interrupt();
+                    }
+                }
+            } catch (JsonParseException | JsonMappingException e) {
+                throw new ClientException("Cannot parse query.", e);
+            } catch (IOException e) {
+                throw new ClientException("Error when sending the request.", e);
+            }
+        } while (retry < retries && status == HttpStatus.SC_GATEWAY_TIMEOUT);
+
+        throw new ClientException("Cannot call the service " + request + ". Tried already several time without success. " +
+                "Status code: " + status + ".");
+    }
 }
