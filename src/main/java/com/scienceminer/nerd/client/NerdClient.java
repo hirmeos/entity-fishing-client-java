@@ -11,6 +11,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.scienceminer.nerd.exception.ClientException;
+import com.sun.security.ntlm.Client;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
@@ -40,6 +41,7 @@ import java.util.List;
 import java.util.Map;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static org.apache.commons.lang3.StringUtils.isNotBlank;
 import static org.apache.commons.lang3.StringUtils.startsWith;
 import static org.apache.http.entity.ContentType.APPLICATION_JSON;
 
@@ -58,7 +60,7 @@ public class NerdClient {
     private static int SENTENCES_PER_GROUP = 10;
 
     private static final ObjectMapper mapper = new ObjectMapper();
-    
+
     private String host;
     private int port = -1;
 
@@ -153,9 +155,7 @@ public class NerdClient {
     private URI getUri(String path) {
         final URI uri;
         try {
-            uri = new URIBuilder()
-                    .setHost(this.host + path)
-                    .build();
+            uri = new URI(this.host + path);
         } catch (URISyntaxException e) {
             throw new ClientException("Error while setting up the url. ", e);
         }
@@ -215,6 +215,8 @@ public class NerdClient {
                 } else {
                     // TODO: add retry in case of 503
                 }
+                throw new ClientException("Error (code: " + closeableHttpResponse.getStatusLine().getStatusCode()
+                        + ") when processing the query \n " + query);
             } catch (UnsupportedEncodingException e) {
                 throw new ClientException("Unsupported encoding when setting entity into post. ", e);
             } catch (ClientProtocolException e) {
@@ -277,8 +279,10 @@ public class NerdClient {
 
         ObjectNode query = mapper.createObjectNode();
         query.put("text", text);
-        final ObjectNode lang = mapper.createObjectNode().put("lang", language);
-        query.set("language", lang);
+        if (isNotBlank(language)) {
+            final ObjectNode lang = mapper.createObjectNode().put("lang", language);
+            query.set("language", lang);
+        }
 
 //        if (CollectionUtils.isNotEmpty(entities)) {
 //            query.setEntities(entities);
