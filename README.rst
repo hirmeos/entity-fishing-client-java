@@ -20,7 +20,46 @@ For more information about entity-fishing, please check the `Entity Fishing Docu
 Installation
 ------------
 
-There are not yet releases. In order to use the client you need to download it and build it
+The latest version is 0.0.1.
+
+You need to add the dependency in your `gradle.build` file:
+
+.. code-block:: json
+
+repositories { maven { url "https://dl.bintray.com/rookies/maven" } }
+
+and add the dependency:
+
+compile 'com.scienceminer.nerd:entity-fishing-client:0.0.1'
+
+or your `pom.xml`:
+
+.. code-block:: xml
+
+<repositories>
+    <repository>
+        <snapshots>
+            <enabled>false</enabled>
+        </snapshots>
+        <id>bintray-rookies-maven</id>
+        <name>bintray</name>
+        <url>https://dl.bintray.com/rookies/maven</url>
+    </repository>
+</repositories>
+
+and add the dependency:
+
+.. code-block:: xml
+
+<dependency>
+  <groupId>com.scienceminer.nerd</groupId>
+  <artifactId>entity-fishing-client</artifactId>
+  <version>0.0.1</version>
+  <type>pom</type>
+</dependency>
+
+
+To build from the sources:
 
 > git clone
 
