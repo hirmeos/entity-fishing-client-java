@@ -2,10 +2,10 @@ Entity Fishing JAVA client
 ==========================
 
 .. image:: http://img.shields.io/:license-apache-blue.svg
-:target: http://www.apache.org/licenses/LICENSE-2.0.html
+    :target: http://www.apache.org/licenses/LICENSE-2.0.html
 
 .. image:: https://travis-ci.org/hirmeos/entity-fishing-client-java.svg?branch=master
-:target: https://travis-ci.org/hirmeos/entity-fishing-client-java
+    :target: https://travis-ci.org/hirmeos/entity-fishing-client-java
 
 
 Java client to query the `Entity Fishing service API`_ developed in the context of the EU H2020 HIRMEOS project (WP3).
