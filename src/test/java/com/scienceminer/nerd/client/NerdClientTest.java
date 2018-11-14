@@ -9,6 +9,8 @@ import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
+import java.util.HashMap;
+import java.util.Map;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.Matchers.greaterThan;
@@ -86,6 +88,16 @@ public class NerdClientTest {
         final ObjectNode segment = target.disambiguatePDF(this.getClass().getResourceAsStream("/lopez2010experiments.pdf"), null);
         assertThat(segment, is(notNullValue()));
         assertThat(((ArrayNode) segment.get("entities")).size(), is(greaterThan(0)));
+    }
+
+    @Test
+    public void testDisambiguateTerms() throws Exception {
+        Map<String, Double> terms = new HashMap<>();
+        terms.put("bao", 0.3);
+        terms.put("miao", 0.6);
+        final ObjectNode segment = target.disambiguateTerm(terms, "en");
+
+        assertThat(segment, is(notNullValue()));
     }
 
 }

@@ -306,57 +306,40 @@ public class NerdClient {
 
     }
 
-    public String termDisambiguate(Map<String, Double> listOfTerm, String language) {
+    public ObjectNode disambiguateTerm(Map<String, Double> terms, String language) {
+        final URI uri = getUri(PATH_DISAMBIGUATE);
 
-        String result = null, term = null;
-        double score = 0.0;
-        try {
-            final URI uri = new URIBuilder()
-                    .setScheme("http")
-                    .setHost(this.host + PATH_DISAMBIGUATE)
-                    .build();
+        ObjectMapper mapper = new ObjectMapper();
+        ObjectNode node = mapper.createObjectNode();
 
+        ArrayNode termsNode = mapper.createArrayNode();
 
-            ObjectMapper mapper = new ObjectMapper();
-            ObjectNode node = mapper.createObjectNode();
-
-            ArrayNode termsNode = mapper.createArrayNode();
-
-            for (Map.Entry<String, Double> list : listOfTerm.entrySet()) {
-                term = list.getKey();
-                score = list.getValue();
-                ObjectNode termNode = mapper.createObjectNode();
-                termNode.put("term", term);
-                termNode.put("score", score);
-                termsNode.add(termNode);
-            }
-
-            node.set("termVector", termsNode);
-
-            if (language != null) {
-                ObjectNode dataNode = mapper.createObjectNode();
-                dataNode.put("lang", language);
-                node.set("language", dataNode);
-            }
-            HttpPost httpPost = new HttpPost(uri);
-            CloseableHttpClient httpResponse = HttpClients.createDefault();
-
-            httpPost.setHeader("Content-Type", APPLICATION_JSON.toString());
-            httpPost.setEntity(new StringEntity(node.toString()));
-            CloseableHttpResponse closeableHttpResponse = httpResponse.execute(httpPost);
-
-            if (closeableHttpResponse.getStatusLine().getStatusCode() == HttpStatus.SC_OK) {
-                return IOUtils.toString(closeableHttpResponse.getEntity().getContent(), UTF_8);
-            } else {
-                return result;
-            }
-
-        } catch (URISyntaxException | UnsupportedEncodingException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
+        for (Map.Entry<String, Double> list : terms.entrySet()) {
+            ObjectNode termNode = mapper.createObjectNode();
+            termNode.put("term", list.getKey());
+            termNode.put("score", list.getValue());
+            termsNode.add(termNode);
         }
-        return result;
+
+        node.set("termVector", termsNode);
+
+        if (isNotBlank(language)) {
+            ObjectNode dataNode = mapper.createObjectNode();
+            dataNode.put("lang", language);
+            node.set("language", dataNode);
+        }
+        HttpPost httpPost = new HttpPost(uri);
+        CloseableHttpClient httpResponse = HttpClients.createDefault();
+
+        httpPost.setHeader("Content-Type", APPLICATION_JSON.toString());
+        try {
+            httpPost.setEntity(new StringEntity(node.toString()));
+            return sendRequest(httpResponse.execute(httpPost), PATH_DISAMBIGUATE);
+        } catch (UnsupportedEncodingException e) {
+            throw new ClientException("Cannot set body. ", e);
+        } catch (IOException e) {
+            throw new ClientException("Generic exception when sending POST. ", e);
+        }
     }
 
 

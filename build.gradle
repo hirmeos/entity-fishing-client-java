@@ -16,6 +16,7 @@ apply plugin: 'maven'
 apply plugin: 'com.jfrog.bintray'
 apply plugin: 'com.github.johnrengelman.shadow'
 apply plugin: 'java'
+apply plugin: 'net.researchgate.release'
 
 group = "org.grobid"
 
@@ -87,6 +88,55 @@ jar {
 artifacts {
     archives shadowJar
     archives mainJar
+}
+
+uploadArchives {
+    // if you want to enable uploading to some maven repo, add those properties to ~/.gradle/gradle.properties, e.g.:
+    /*
+        mavenRepoUserName=maven_username
+        mavenRepoPassword=super_secret
+        mavenRepoReleasesUrl=https://nexus3.example.org/repository/maven-releases/
+        mavenRepoSnapshotsUrl=https://nexus3.example.org/repository/maven-snapshots/
+    */
+    def user = project.hasProperty('mavenRepoUserName') ? project.findProperty('mavenRepoUserName') : ''
+    def password = project.hasProperty('mavenRepoPassword') ? project.findProperty('mavenRepoPassword') : ''
+    def rurl = project.hasProperty('mavenRepoReleasesUrl') ? project.findProperty('mavenRepoReleasesUrl') : ''
+    def surl = project.hasProperty('mavenRepoSnapshotsUrl') ? project.findProperty('mavenRepoSnapshotsUrl') : ''
+
+    repositories.mavenDeployer {
+        repository(url: rurl) {
+            authentication(userName: user, password: password)
+        }
+        snapshotRepository(url: surl) {
+            authentication(userName: user, password: password)
+        }
+
+    }
+}
+
+bintray {
+    dryRun = false // Whether to run this as dry-run, without deploying
+    publish = true // If version should be auto published after an upload
+
+    // read from ~/.gradle/gradle.properties. Set those up before releasing
+    user = project.hasProperty('bintrayUser') ? bintrayUser : ''
+    key = project.hasProperty('bintrayApiKey') ? bintrayApiKey : ''
+    configurations = ['archives']
+    pkg {
+        name = 'grobid'
+        repo = 'maven'
+        userOrg = 'rookies'
+        licenses = ['Apache-2.0']
+        vcsUrl = 'https://github.com/kermitt2/grobid'
+        issueTrackerUrl = 'https://github.com/kermitt2/grobid/issues'
+        githubRepo = 'kermitt2/grobid'
+
+        version {
+            name = rootProject.version
+            vcsTag = rootProject.version
+            released = new Date()
+        }
+    }
 }
 
 /*tasks.withType(JavaCompile) {
