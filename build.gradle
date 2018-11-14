@@ -76,7 +76,7 @@ shadowJar {
     classifier = 'onejar'
     zip64 true
     manifest {
-        attributes 'Main-Class': 'org.grobid.core.main.batch.NERMain'
+        attributes 'Main-Class': 'com.scienceminer.nerd.main.Main'
     }
 }
 
