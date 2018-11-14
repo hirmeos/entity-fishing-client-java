@@ -101,6 +101,8 @@ you can supply the language (iso form of two digits, en, fr, etc..) and the enti
 
 The response is a ObjectNode, representing a json object:
 
+.. code-block::
+
     {
         'entities': [
             {
@@ -223,7 +225,7 @@ KB access
 
 The response is using ObjectNode, modelling a json object in the form as follow:
 
-.. code-block:: json
+.. code-block::
 
     {
         'rawName': 'Lyon',
