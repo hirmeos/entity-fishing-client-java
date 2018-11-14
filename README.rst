@@ -24,16 +24,17 @@ The latest version is 0.0.1.
 
 You need to add the dependency in your `gradle.build` file:
 
-.. code-block:: json
+.. code-block::
 
     repositories { maven { url "https://dl.bintray.com/rookies/maven" } }
 
 
 and add the dependency:
 
-..code-block:: json
+.. code-block::
 
     compile 'com.scienceminer.nerd:entity-fishing-client:0.0.1'
+
 
 or your `pom.xml`:
 
