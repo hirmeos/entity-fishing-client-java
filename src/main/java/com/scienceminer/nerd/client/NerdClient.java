@@ -27,9 +27,7 @@ import org.apache.http.impl.client.HttpClients;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
-import java.io.IOException;
-import java.io.UnsupportedEncodingException;
+import java.io.*;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
@@ -246,18 +244,21 @@ public class NerdClient {
         return processQuery(query);
     }
 
-
     public ObjectNode disambiguatePDF(File pdf, String language) {
-        int status = 0, retry = 0, retries = 4;
+        try {
+            return disambiguatePDF(new FileInputStream(pdf), language);
+        } catch (FileNotFoundException e) {
+            throw new ClientException("File not found", e);
+        }
+    }
+
+    public ObjectNode disambiguatePDF(InputStream pdf, String language) {
         ObjectNode query = mapper.createObjectNode();
         query.put("customisation", "generic");
         if (isNotBlank(language)) {
             final ObjectNode lang = mapper.createObjectNode().put("lang", language);
             query.set("language", lang);
         }
-//        if (CollectionUtils.isNotEmpty(entities)) {
-//            query.setEntities(entities);
-//        }
 
         final URI uri = getUri(PATH_DISAMBIGUATE);
 
@@ -269,7 +270,6 @@ public class NerdClient {
         builder.addTextBody("query", query.toString());
 
         httpPost.setEntity(builder.build());
-        CloseableHttpResponse closeableHttpResponse = null;
 
         try {
             return sendRequest(httpclient.execute(httpPost), PATH_DISAMBIGUATE);

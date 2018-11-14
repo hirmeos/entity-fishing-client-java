@@ -11,6 +11,7 @@ import org.junit.Test;
 import java.io.File;
 
 import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.core.IsNull.notNullValue;
 import static org.junit.Assert.assertThat;
 
@@ -81,10 +82,10 @@ public class NerdClientTest {
     }
 
     @Test
-    public void test_disambiguatePDF() throws Exception {
-        File pdfFile = new File("/Users/azhar/work/biblio-glutton-harvester/data/e17d8b49-1108-47fd-8705-9cc1250325db.pdf");
-        final ObjectNode segment = target.disambiguatePDF(pdfFile, null, null);
-System.out.println(segment.toString());
+    public void testDisambiguatePDF() throws Exception {
+        final ObjectNode segment = target.disambiguatePDF(this.getClass().getResourceAsStream("/lopez2010experiments.pdf"), null);
+        assertThat(segment, is(notNullValue()));
+        assertThat(((ArrayNode) segment.get("entities")).size(), is(greaterThan(0)));
     }
 
 }
