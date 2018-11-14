@@ -152,7 +152,7 @@ public class NerdClient {
         return sentenceGroups;
     }
 
-    public ObjectNode processQuery(ObjectNode query) {
+    protected ObjectNode processQuery(ObjectNode query) {
         return processQuery(query, false);
     }
 
@@ -227,6 +227,42 @@ public class NerdClient {
 
         }
         return query;
+    }
+
+    public ObjectNode disambiguateQuery(String text, String language) {
+        ObjectNode query = mapper.createObjectNode();
+        query.put("shortText", text);
+        query.put("onlyNER", "false");
+        query.put("customisation", "generic");
+
+        if (isNotBlank(language)) {
+            final ObjectNode lang = mapper.createObjectNode().put("lang", language);
+            query.set("language", lang);
+        }
+
+//        if (CollectionUtils.isNotEmpty(entities)) {
+//            query.setEntities(entities);
+//        }
+
+        final URI uri = getUri(PATH_DISAMBIGUATE);
+
+        HttpPost httpPost = new HttpPost(uri);
+        CloseableHttpClient httpResponse = HttpClients.createDefault();
+
+        httpPost.setHeader("Content-Type", APPLICATION_JSON.toString());
+        String jsonInString;
+        try {
+            jsonInString = mapper.writeValueAsString(query);
+            httpPost.setEntity(new StringEntity(jsonInString));
+        } catch (JsonProcessingException | UnsupportedEncodingException e) {
+            throw new ClientException("Cannot serialise query. ", e);
+        }
+
+        try {
+            return sendRequest(httpResponse.execute(httpPost), PATH_DISAMBIGUATE);
+        } catch (IOException e) {
+            throw new ClientException("Generic exception when sending POST. ", e);
+        }
     }
 
     public ObjectNode disambiguateText(String text, String language) {
