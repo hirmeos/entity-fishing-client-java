@@ -4,14 +4,12 @@ package com.scienceminer.nerd.client;
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.scienceminer.nerd.data.Sentence;
 import com.scienceminer.nerd.exception.ClientException;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.io.IOUtils;
@@ -252,7 +250,7 @@ public class NerdClient {
         }
 
         if (totalNumberOfSentences > 1) {
-            query.put("sentences", sentenceCoordinates);
+            query.set("sentences", sentenceCoordinates);
         }
 
         if (sentenceGroup.size() > 0) {
@@ -277,7 +275,7 @@ public class NerdClient {
         ObjectNode query = mapper.createObjectNode();
         query.put("text", text);
         final ObjectNode lang = mapper.createObjectNode().put("lang", language);
-        query.put("language", lang);
+        query.set("language", lang);
 
 //        if (CollectionUtils.isNotEmpty(entities)) {
 //            query.setEntities(entities);

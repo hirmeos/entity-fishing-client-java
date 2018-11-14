@@ -1,7 +1,5 @@
 package com.scienceminer.nerd.exception;
 
-import java.net.URISyntaxException;
-
 public class ClientException extends RuntimeException {
 
     public ClientException() {
