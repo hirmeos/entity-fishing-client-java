@@ -8,6 +8,8 @@ import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
 
+import java.io.File;
+
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.core.IsNull.notNullValue;
 import static org.junit.Assert.assertThat;
@@ -76,6 +78,13 @@ public class NerdClientTest {
 
         assertThat(concept.get("rawName").asText(), is("Lyon"));
         assertThat(concept.get("wikipediaExternalRef").asText(), is("8638634"));
+    }
+
+    @Test
+    public void test_disambiguatePDF() throws Exception {
+        File pdfFile = new File("/Users/azhar/work/biblio-glutton-harvester/data/e17d8b49-1108-47fd-8705-9cc1250325db.pdf");
+        final ObjectNode segment = target.disambiguatePDF(pdfFile, null, null);
+System.out.println(segment.toString());
     }
 
 }

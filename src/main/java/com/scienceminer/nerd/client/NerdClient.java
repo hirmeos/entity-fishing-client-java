@@ -11,6 +11,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.scienceminer.nerd.exception.ClientException;
+import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.http.HttpStatus;
@@ -26,6 +27,7 @@ import org.apache.http.impl.client.HttpClients;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URI;
@@ -173,13 +175,13 @@ public class NerdClient {
             } catch (JsonProcessingException | UnsupportedEncodingException e) {
                 throw new ClientException("Cannot serialise query. ", e);
             }
-            
+
             try {
                 return sendRequest(httpResponse.execute(httpPost), PATH_DISAMBIGUATE);
             } catch (IOException e) {
                 throw new ClientException("Generic exception when sending POST. ", e);
             }
-            
+
         }
 
         String text = query.get("text").asText();
@@ -242,6 +244,39 @@ public class NerdClient {
 //        }
 
         return processQuery(query);
+    }
+
+
+    public ObjectNode disambiguatePDF(File pdf, String language) {
+        int status = 0, retry = 0, retries = 4;
+        ObjectNode query = mapper.createObjectNode();
+        query.put("customisation", "generic");
+        if (isNotBlank(language)) {
+            final ObjectNode lang = mapper.createObjectNode().put("lang", language);
+            query.set("language", lang);
+        }
+//        if (CollectionUtils.isNotEmpty(entities)) {
+//            query.setEntities(entities);
+//        }
+
+        final URI uri = getUri(PATH_DISAMBIGUATE);
+
+        HttpPost httpPost = new HttpPost(uri);
+        CloseableHttpClient httpclient = HttpClients.createDefault();
+
+        MultipartEntityBuilder builder = MultipartEntityBuilder.create();
+        builder.addBinaryBody("file", pdf);
+        builder.addTextBody("query", query.toString());
+
+        httpPost.setEntity(builder.build());
+        CloseableHttpResponse closeableHttpResponse = null;
+
+        try {
+            return sendRequest(httpclient.execute(httpPost), PATH_DISAMBIGUATE);
+        } catch (IOException e) {
+            throw new ClientException("Generic exception when sending POST. ", e);
+        }
+
     }
 
     public String termDisambiguate(Map<String, Double> listOfTerm, String language) {
