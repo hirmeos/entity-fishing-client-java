@@ -235,15 +235,13 @@ public class NerdClient {
         String text = String.valueOf(query.get("text"));
 
         //prepare single sentence
-        ObjectNode sentenceCoordinates = mapper.createObjectNode();
-        final ArrayNode arrayNode = mapper.createArrayNode();
-        sentenceCoordinates.set("sentence", arrayNode);
+        ArrayNode sentencesCoordinatesArray = mapper.createArrayNode();
         final ObjectNode objectNode = mapper.createObjectNode();
         objectNode.put("offsetStart", 0);
         objectNode.put("offsetEnd", StringUtils.length(text));
-        arrayNode.add(objectNode);
+        sentencesCoordinatesArray.add(objectNode);
 
-        int totalNumberOfSentences = sentenceCoordinates.get("sentences").size();
+        int totalNumberOfSentences = sentencesCoordinatesArray.size();
         List<ArrayNode> sentenceGroup = new ArrayList<>();
 
         if (StringUtils.length(text) > MAX_TEXT_LENGTH) {
@@ -251,18 +249,17 @@ public class NerdClient {
 
             final ObjectNode sentences = segment(text);
 
-            final ArrayNode sentencesArray  = (ArrayNode) sentences.get("sentences");
-            totalNumberOfSentences = sentencesArray.size();
-            sentenceCoordinates = sentences;
+            sentencesCoordinatesArray = (ArrayNode) sentences.get("sentences");
+            totalNumberOfSentences = sentencesCoordinatesArray.size();
 
             sentenceGroup = groupSentence(totalNumberOfSentences, SENTENCES_PER_GROUP);
 
         } else {
-//            query['sentence'] = "true"
+           query.put("sentence", true); 
         }
 
         if (totalNumberOfSentences > 1) {
-            query.set("sentences", sentenceCoordinates);
+            query.set("sentences", sentencesCoordinatesArray);
         }
 
         if (sentenceGroup.size() > 0) {
