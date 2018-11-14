@@ -11,12 +11,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.scienceminer.nerd.data.Language;
-import com.scienceminer.nerd.data.NerdEntity;
-import com.scienceminer.nerd.data.NerdQuery;
 import com.scienceminer.nerd.data.Sentence;
 import com.scienceminer.nerd.exception.ClientException;
-import com.sun.security.ntlm.Client;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
@@ -46,7 +42,6 @@ import java.util.List;
 import java.util.Map;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
-import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.apache.commons.lang3.StringUtils.startsWith;
 import static org.apache.http.entity.ContentType.APPLICATION_JSON;
 
@@ -114,9 +109,7 @@ public class NerdClient {
     }
 
 
-    public List<Sentence> segment(String text) {
-        List<Sentence> list = new ArrayList<>();
-
+    public ObjectNode segment(String text) {
         int status = 0, retry = 0, retries = 4;
         final URI uri = getUri(PATH_SEGMENTATION);
 
@@ -135,10 +128,8 @@ public class NerdClient {
                 closeableHttpResponse = httpResponse.execute(httpPost);
                 status = closeableHttpResponse.getStatusLine().getStatusCode();
                 if (status == HttpStatus.SC_OK) {
-                    String jsonOut = IOUtils.toString(closeableHttpResponse.getEntity().getContent(), UTF_8);
-                    JsonNode actualObj = mapper.readTree(jsonOut);
-                    list = mapper.readValue(actualObj.get("sentences").toString(), new TypeReference<List<Sentence>>() {
-                    });
+                    JsonNode actualObj = mapper.readTree(closeableHttpResponse.getEntity().getContent());
+                    return actualObj.deepCopy();
                 } else if (status == HttpStatus.SC_SERVICE_UNAVAILABLE) {
                     try {
                         LOGGER.warn("Got 503. Sleeping and re-trying. ");
@@ -154,7 +145,8 @@ public class NerdClient {
                 throw new ClientException("Error when sending the request.", e);
             }
         } while (retry < retries && status == HttpStatus.SC_GATEWAY_TIMEOUT);
-        return list;
+
+        throw new ClientException("Cannot call the service. Tried already several time without success.");
     }
 
     private URI getUri(String path) {
@@ -234,8 +226,13 @@ public class NerdClient {
         String text = String.valueOf(query.get("text"));
 
         //prepare single sentence
-        List<Sentence> sentenceCoordinates = new ArrayList<>();
-        sentenceCoordinates.add(new Sentence(0, StringUtils.length(text)));
+        ObjectNode sentenceCoordinates = mapper.createObjectNode();
+        final ArrayNode arrayNode = mapper.createArrayNode();
+        sentenceCoordinates.set("sentences", arrayNode);
+        final ObjectNode objectNode = mapper.createObjectNode();
+        objectNode.put("offsetStart", 0);
+        objectNode.put("offsetEnd", StringUtils.length(text));
+        arrayNode.add(objectNode);
 
         int totalNumberOfSentences = sentenceCoordinates.size();
         List<List<Integer>> sentenceGroup = new ArrayList<>();
@@ -243,7 +240,7 @@ public class NerdClient {
         if (StringUtils.length(text) > MAX_TEXT_LENGTH) {
             // we need to cut the text in more sentences
 
-            final List<Sentence> sentences = segment(text);
+            final ObjectNode sentences = segment(text);
 
             totalNumberOfSentences = sentences.size();
             sentenceCoordinates = sentences;
@@ -254,12 +251,12 @@ public class NerdClient {
 //            query['sentence'] = "true"
         }
 
-        if(totalNumberOfSentences > 1) {
+        if (totalNumberOfSentences > 1) {
             query.put("sentences", sentenceCoordinates);
         }
 
-        if(sentenceGroup.size() > 0) {
-            for(List<Integer> group : sentenceGroup) {
+        if (sentenceGroup.size() > 0) {
+            for (List<Integer> group : sentenceGroup) {
                 query.put("processSentence", Arrays.toString(group.toArray()));
                 final ObjectNode jsonNodes = processQuery(query, true);
                 query.set("entities", jsonNodes.get("entities"));
