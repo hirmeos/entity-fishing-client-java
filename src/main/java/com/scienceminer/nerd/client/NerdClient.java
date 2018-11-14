@@ -52,21 +52,24 @@ public class NerdClient {
     private static String PATH_LANGUAGE_RECOGNITION = "/language";
     private static String PATH_SEGMENTATION = "/segmentation";
 
+    private static String DEFAULT_HOST = "http://nerd.huma-num.fr/nerd/service";
+
     private static int MAX_TEXT_LENGTH = 500;
     private static int SENTENCES_PER_GROUP = 10;
 
     private static final ObjectMapper mapper = new ObjectMapper();
-
-
+    
     private String host;
     private int port = -1;
 
     public NerdClient() {
+        this.host = DEFAULT_HOST;
         mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
         mapper.configure(JsonParser.Feature.ALLOW_SINGLE_QUOTES, true);
     }
 
     public NerdClient(String host) {
+        this();
         this.host = host;
     }
 
