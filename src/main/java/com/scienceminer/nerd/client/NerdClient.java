@@ -18,16 +18,20 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.HttpStatus;
+import org.apache.http.NameValuePair;
 import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.utils.URIBuilder;
+import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
+import org.apache.http.entity.mime.MultipartEntityBuilder;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.impl.client.HttpClients;
+import org.apache.http.message.BasicNameValuePair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -119,11 +123,13 @@ public class NerdClient {
         HttpPost httpPost = new HttpPost(uri);
         CloseableHttpClient httpResponse = HttpClients.createDefault();
 
-        httpPost.setHeader("Content-Type", APPLICATION_JSON.toString());
+//        httpPost.setHeader("Content-Type", APPLICATION_JSON.toString());
+//        httpPost.setHeader("Content-Type", APPLICATION_JSON.toString());
 
-        ObjectNode textnode = mapper.createObjectNode();
-        textnode.put("text", text);
-        httpPost.setEntity(new StringEntity(textnode.toString(), UTF_8));
+        MultipartEntityBuilder builder = MultipartEntityBuilder.create();
+        builder.addTextBody("text", text);
+
+        httpPost.setEntity(builder.build());
         CloseableHttpResponse closeableHttpResponse = null;
 
         do {
@@ -149,7 +155,8 @@ public class NerdClient {
             }
         } while (retry < retries && status == HttpStatus.SC_GATEWAY_TIMEOUT);
 
-        throw new ClientException("Cannot call the service. Tried already several time without success.");
+        throw new ClientException("Cannot call the segmentation service. Tried already several time without success. " +
+                "Status code: " + status + ".");
     }
 
     private URI getUri(String path) {
@@ -162,9 +169,9 @@ public class NerdClient {
         return uri;
     }
 
-    private List<List<Integer>> groupSentence(int totalNumberOfSentence, int groupLength) {
-        List<List<Integer>> sentenceGroups = new ArrayList<>();
-        List<Integer> currentSentenceGroup = new ArrayList<>();
+    private List<ArrayNode> groupSentence(int totalNumberOfSentence, int groupLength) {
+        List<ArrayNode> sentenceGroups = new ArrayList<>();
+        ArrayNode currentSentenceGroup = mapper.createArrayNode();
 
         for (int i = 0; i < totalNumberOfSentence; i++) {
             if (i % groupLength == 0) {
@@ -172,14 +179,14 @@ public class NerdClient {
                     sentenceGroups.add(currentSentenceGroup);
                 }
 
-                currentSentenceGroup = new ArrayList<>();
+                currentSentenceGroup = mapper.createArrayNode();
                 currentSentenceGroup.add(i);
             } else {
                 currentSentenceGroup.add(i);
             }
         }
 
-        if (CollectionUtils.isNotEmpty(currentSentenceGroup)) {
+        if (currentSentenceGroup.size() > 0) {
             sentenceGroups.add(currentSentenceGroup);
         }
 
@@ -190,7 +197,8 @@ public class NerdClient {
         return processQuery(query, false);
     }
 
-    public ObjectNode processQuery(ObjectNode query, boolean prepared) {
+    protected ObjectNode processQuery(ObjectNode query, boolean prepared) {
+
         if (prepared) {
             //POST
             final URI uri = getUri(PATH_DISAMBIGUATE);
@@ -212,8 +220,6 @@ public class NerdClient {
                 if (closeableHttpResponse.getStatusLine().getStatusCode() == HttpStatus.SC_OK) {
                     ObjectNode response = mapper.readValue(closeableHttpResponse.getEntity().getContent(), ObjectNode.class);
                     return response;
-                } else {
-                    // TODO: add retry in case of 503
                 }
                 throw new ClientException("Error (code: " + closeableHttpResponse.getStatusLine().getStatusCode()
                         + ") when processing the query \n " + query);
@@ -231,21 +237,22 @@ public class NerdClient {
         //prepare single sentence
         ObjectNode sentenceCoordinates = mapper.createObjectNode();
         final ArrayNode arrayNode = mapper.createArrayNode();
-        sentenceCoordinates.set("sentences", arrayNode);
+        sentenceCoordinates.set("sentence", arrayNode);
         final ObjectNode objectNode = mapper.createObjectNode();
         objectNode.put("offsetStart", 0);
         objectNode.put("offsetEnd", StringUtils.length(text));
         arrayNode.add(objectNode);
 
-        int totalNumberOfSentences = sentenceCoordinates.size();
-        List<List<Integer>> sentenceGroup = new ArrayList<>();
+        int totalNumberOfSentences = sentenceCoordinates.get("sentences").size();
+        List<ArrayNode> sentenceGroup = new ArrayList<>();
 
         if (StringUtils.length(text) > MAX_TEXT_LENGTH) {
             // we need to cut the text in more sentences
 
             final ObjectNode sentences = segment(text);
 
-            totalNumberOfSentences = sentences.size();
+            final ArrayNode sentencesArray  = (ArrayNode) sentences.get("sentences");
+            totalNumberOfSentences = sentencesArray.size();
             sentenceCoordinates = sentences;
 
             sentenceGroup = groupSentence(totalNumberOfSentences, SENTENCES_PER_GROUP);
@@ -259,8 +266,9 @@ public class NerdClient {
         }
 
         if (sentenceGroup.size() > 0) {
-            for (List<Integer> group : sentenceGroup) {
-                query.put("processSentence", Arrays.toString(group.toArray()));
+            System.out.println("Splitting the query in " + sentenceGroup.size() + " requests.");
+            for (ArrayNode group : sentenceGroup) {
+                query.set("processSentence", group);
                 final ObjectNode jsonNodes = processQuery(query, true);
                 query.set("entities", jsonNodes.get("entities"));
                 query.set("language", jsonNodes.get("language"));
@@ -336,9 +344,7 @@ public class NerdClient {
                 return result;
             }
 
-        } catch (URISyntaxException e) {
-            e.printStackTrace();
-        } catch (UnsupportedEncodingException e) {
+        } catch (URISyntaxException | UnsupportedEncodingException e) {
             e.printStackTrace();
         } catch (IOException e) {
             e.printStackTrace();
