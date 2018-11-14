@@ -232,17 +232,12 @@ public class NerdClient {
     public ObjectNode disambiguateQuery(String text, String language) {
         ObjectNode query = mapper.createObjectNode();
         query.put("shortText", text);
-        query.put("onlyNER", "false");
         query.put("customisation", "generic");
 
         if (isNotBlank(language)) {
             final ObjectNode lang = mapper.createObjectNode().put("lang", language);
             query.set("language", lang);
         }
-
-//        if (CollectionUtils.isNotEmpty(entities)) {
-//            query.setEntities(entities);
-//        }
 
         final URI uri = getUri(PATH_DISAMBIGUATE);
 
@@ -272,10 +267,6 @@ public class NerdClient {
             final ObjectNode lang = mapper.createObjectNode().put("lang", language);
             query.set("language", lang);
         }
-
-//        if (CollectionUtils.isNotEmpty(entities)) {
-//            query.setEntities(entities);
-//        }
 
         return processQuery(query);
     }
