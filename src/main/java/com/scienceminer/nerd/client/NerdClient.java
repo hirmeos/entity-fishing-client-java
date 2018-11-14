@@ -232,7 +232,7 @@ public class NerdClient {
             }
         }
 
-        String text = String.valueOf(query.get("text"));
+        String text = query.get("text").asText();
 
         //prepare single sentence
         ArrayNode sentencesCoordinatesArray = mapper.createArrayNode();
@@ -280,8 +280,6 @@ public class NerdClient {
     }
 
     public ObjectNode disambiguateText(String text, String language) {
-        final URI uri = getUri(PATH_DISAMBIGUATE);
-
         ObjectNode query = mapper.createObjectNode();
         query.put("text", text);
         if (isNotBlank(language)) {
