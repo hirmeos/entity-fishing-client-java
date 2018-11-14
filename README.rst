@@ -379,9 +379,34 @@ with response
     )
 
 
-Todo
-----
+Multithread client
+##################
 
-The following methods are missing from this client:
-* ``termDisambiguation``
-* ``batchProcessing``
+Build and run
+-------------
+
+    > ./gradlew clean install
+
+Usage
+
+Parameters:
+
+* `-in`: path to the directory containing the PDF files to process
+
+* `-out`: path to the directory where to put the results
+
+* `-exe`: GROBID service to be used, one of `[processFulltextDocument, processHeaderDocument, processReferences]` (default `processFulltextDocument`)
+
+* `-n`: concurrency for service usage (default 10)
+
+For example:
+
+    > java -jar target/org.grobid.client-0.5.2-SNAPSHOT.one-jar.jar -in ~/tmp/in2 -out ~/tmp/out -exe processFulltextDocument
+
+This command will process all the PDF files present in the input directory (files with extension `.pdf` only) with the `processFulltextDocument` service of GROBID, and write the resulting XML TEI files under the output directory, reusing the file name with a different file extension (`.tei.xml`), using the default `10` concurrent workers.
+
+    > java -jar target/org.grobid.client-0.5.2-SNAPSHOT.one-jar.jar -in ~/tmp/in2 -out ~/tmp/out -n 20 -exe processHeaderDocument
+
+This command will process all the PDF files present in the input directory (files with extension `.pdf` only) with the `processHeaderDocument` service of GROBID, and write the resulting XML TEI files under the output directory, reusing the file name with a different file extension (`.tei.xml`), using `20` concurrent workers.
+
+
