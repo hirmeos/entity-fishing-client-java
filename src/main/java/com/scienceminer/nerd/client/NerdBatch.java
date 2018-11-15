@@ -5,8 +5,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
-import java.io.FilenameFilter;
-import java.util.concurrent.*;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 /**
  * @author Patrice
@@ -17,6 +19,7 @@ public class NerdBatch {
 
     private String host;
     private int sleepTime;
+    
     public NerdBatch(String host, int sleepTime) {
         this.host = host;
         this.sleepTime = sleepTime;
