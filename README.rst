@@ -369,6 +369,7 @@ Segmentation
 
 
 with response
+
 .. code-block:: python
 
     (
@@ -378,6 +379,7 @@ with response
         },
         200
     )
+
 
 
 Multithread client
@@ -392,13 +394,11 @@ Usage
 
 Parameters:
 
-* `-in`: path to the directory containing the PDF files to process
+* ``-in``: path to the directory containing the PDF files to process
 
-* `-out`: path to the directory where to put the results
+* ``-out``: path to the directory where to put the results
 
-* `-exe`: GROBID service to be used, one of `[processFulltextDocument, processHeaderDocument, processReferences]` (default `processFulltextDocument`)
-
-* `-n`: concurrency for service usage (default 10)
+* ``-n``: concurrency for service usage (default 10)
 
 For example:
 
