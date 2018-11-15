@@ -380,8 +380,6 @@ with response
         200
     )
 
-
-
 Multithread client
 ##################
 
@@ -391,19 +389,17 @@ Usage
 Parameters:
 
 * ``-in``: path to the directory containing the PDF files to process
-
 * ``-out``: path to the directory where to put the results
-
 * ``-n``: concurrency for service usage (default 10)
 
 For example:
 
     > java -jar target/org.grobid.client-0.5.2-SNAPSHOT.one-jar.jar -in ~/tmp/in2 -out ~/tmp/out
 
-This command will process all the PDF files present in the input directory (files with extension `.pdf` only) using the default `10` concurrent workers.
+This command will process all the PDF files present in the input directory (files with extension ``.pdf`` only) using the default ``10`` concurrent workers.
 
     > java -jar target/org.grobid.client-0.5.2-SNAPSHOT.one-jar.jar -in ~/tmp/in2 -out ~/tmp/out -n 20
 
-This command will process all the PDF files present in the input directory (files with extension `.pdf` only) and write the resulting JSON files under the output directory, reusing the file name with a different file extension (`.json`), using `20` concurrent workers.
+This command will process all the PDF files present in the input directory (files with extension ``.pdf`` only) and write the resulting JSON files under the output directory, reusing the file name with a different file extension (``.json``), using ``20`` concurrent workers.
 
 
