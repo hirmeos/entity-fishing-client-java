@@ -385,12 +385,8 @@ with response
 Multithread client
 ##################
 
-Build and run
--------------
-
-    > ./gradlew clean install
-
 Usage
+-----
 
 Parameters:
 
