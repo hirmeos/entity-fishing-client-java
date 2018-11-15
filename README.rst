@@ -381,9 +381,9 @@ with response
     )
 
 
-Multithread client
-##################
 
+Multithread client
+==================
 The multithread client can be used to process a directory of PDFs and save the results into another directory.
 
 
