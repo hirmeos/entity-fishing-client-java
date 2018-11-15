@@ -1,6 +1,6 @@
 package com.scienceminer.nerd.main;
 
-import com.scienceminer.nerd.client.NerdProcess;
+import com.scienceminer.nerd.client.NerdBatch;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -114,7 +114,7 @@ public class Main {
             }
 
             long startTime = System.nanoTime();
-            NerdProcess process = new NerdProcess(gbdArgs.getHost(), gbdArgs.getSleepTime());
+            NerdBatch process = new NerdBatch(gbdArgs.getHost(), gbdArgs.getSleepTime());
             process.process(dirInputPath.getAbsolutePath(), dirOutputPath.getAbsolutePath(), gbdArgs.getNbConcurrency());
             long endTime = System.nanoTime();
             System.out.println("\ntotal runtime:" + (endTime - startTime) / 1000000 + " ms");

@@ -6,7 +6,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
 
@@ -45,5 +44,9 @@ public class NerdWorker implements Runnable {
         }
         long endTime = System.nanoTime();
         logger.info(Thread.currentThread().getName() + " End. :" + (endTime - startTime) / 1000000 + " ms");
+    }
+
+    public String getFilename() {
+        return pdfFile.getAbsolutePath();
     }
 }
