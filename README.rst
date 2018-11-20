@@ -21,7 +21,7 @@ For more information about entity-fishing, please check the `Entity Fishing Docu
 Installation
 ------------
 
-The latest version is 0.0.1.
+The latest version is 0.0.2.
 
 You need to add the dependency in your `gradle.build` file:
 
@@ -34,7 +34,7 @@ and add the dependency:
 
 .. code-block::
 
-    compile 'com.scienceminer.nerd:entity-fishing-client:0.0.1'
+    compile 'com.scienceminer.nerd:entity-fishing-client:0.0.2'
 
 
 or your `pom.xml`:
@@ -59,7 +59,7 @@ and add the dependency:
     <dependency>
       <groupId>com.scienceminer.nerd</groupId>
       <artifactId>entity-fishing-client</artifactId>
-      <version>0.0.1</version>
+      <version>0.0.2</version>
       <type>pom</type>
     </dependency>
 
