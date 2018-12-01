@@ -10,9 +10,6 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
-/**
- * @author Patrice
- */
 public class NerdBatch {
 
     private static final Logger logger = LoggerFactory.getLogger(NerdBatch.class);
